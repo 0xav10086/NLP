@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import Canvas, Button
-from PIL import Image, ImageDraw, ImageTk
+from PIL import Image, ImageDraw
 import io
 import torch
 from torchvision.transforms import functional as F
@@ -8,34 +8,10 @@ import torchvision
 
 # Load your trained model
 model = torchvision.models.regnet.regnet_x_400mf()
-model.load_state_dict(torch.load('MNIST_5_acc_0.9717.pth', map_location=torch.device('cpu')))
+model.load_state_dict(torch.load('MNIST_20_acc_0.9819.pth', map_location=torch.device('cpu')))
 model.eval()
 
-def predict_digit(image):
-    # Convert the PIL Image to grayscale
-    image = image.convert("L")
-
-    # Replicate the single channel image to create a 3-channel image
-    image = Image.merge("RGB", [image]*3)
-
-    # Preprocess the image
-    image = F.to_tensor(image)
-    image = F.resize(image, (32, 32))
-    image = F.normalize(image, [0.5], [0.5])
-
-    # Add batch dimension
-    image = image.unsqueeze(0)
-
-    # Perform prediction
-    with torch.no_grad():
-        output = model(image)
-
-    # Get predicted digit
-    _, predicted_class = output.max(1)
-    return predicted_class.item()
-
-
-class DrawingApp:
+class DigitRecognizer:
     def __init__(self, master):
         self.master = master
         self.master.title("Digit Recognizer")
@@ -45,6 +21,9 @@ class DrawingApp:
 
         self.button_recognize = Button(master, text="Recognize", command=self.recognize_digit)
         self.button_recognize.pack()
+
+        self.button_redraw = Button(master, text="Redraw", command=self.redraw_canvas)
+        self.button_redraw.pack()
 
         self.label_result = tk.Label(master, text="")
         self.label_result.pack()
@@ -61,10 +40,17 @@ class DrawingApp:
         image = self.convert_canvas_to_image()
 
         # Get the predicted digit
-        digit = predict_digit(image)
+        digit = self.predict_digit(image)
 
         # Display the result
         self.label_result.config(text=f"Predicted Digit: {digit}")
+
+    def redraw_canvas(self):
+        # Clear the canvas
+        self.canvas.delete("all")
+
+        # Clear the result label
+        self.label_result.config(text="")
 
     def convert_canvas_to_image(self):
         # Create a blank image with a white background
@@ -80,8 +66,30 @@ class DrawingApp:
 
         return image
 
+    def predict_digit(self, image):
+        # Convert the PIL Image to grayscale
+        image = image.convert("L")
+
+        # Replicate the single-channel image to create a 3-channel image
+        image = Image.merge("RGB", [image]*3)
+
+        # Preprocess the image
+        image = F.to_tensor(image)
+        image = F.normalize(image, [0.5], [0.5])
+
+        # Add batch dimension
+        image = image.unsqueeze(0)
+
+        # Perform prediction
+        with torch.no_grad():
+            output = model(image)
+
+        # Get predicted digit
+        _, predicted_class = output.max(1)
+        return predicted_class.item()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = DrawingApp(root)
+    app = DigitRecognizer(root)
     root.mainloop()
