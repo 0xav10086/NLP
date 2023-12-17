@@ -69,7 +69,7 @@ optim = torch.optim.SGD(mynet.parameters(), learning_rate)
 
 train_step = 0
 
-epoch = 5
+epoch = 20
 
 if __name__ == '__main__':
     for i in range(epoch):
